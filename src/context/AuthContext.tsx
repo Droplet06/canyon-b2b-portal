@@ -9,12 +9,15 @@ const fakeApiLogin = async (email: string, pass: string): Promise<AuthenticatedU
     setTimeout(() => {
       // In a real app, this would be a secure API call.
       // For this closed system, we check against pre-assigned credentials.
-      if (email.toLowerCase() === 'customer@example.com' && pass === 'password123') {
+// 1. 修改这里的判断条件（这是门锁，决定能不能登录）
+      if (email.toLowerCase() === 'billbill@yantea.com' && pass === 'yanteathebest') {
         resolve({
           uid: 'user-123',
-          name: 'John Doe',
-          email: 'customer@example.com',
-          zohoContactId: 'z_contact_456789', // Example Zoho Contact ID
+
+          name: 'Bill Wu', 
+
+          email: 'billbill@yantea.com', 
+          zohoContactId: 'z_contact_456789',
         });
       } else {
         reject(new Error('Invalid credentials. Please contact your account manager.'));
