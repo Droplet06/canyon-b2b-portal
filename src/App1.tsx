@@ -3,44 +3,28 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/common/ProtectedRoute';
-
-// Pages
 import LoginPage from './pages/LoginPage';
 import CatalogPage from './pages/CatalogPage';
-import SuccessPage from './pages/SuccessPage';
+import ProtectedRoute from './components/common/ProtectedRoute';
 
-// Placeholder Pages
-const HistoryPage = () => (
-  <div className="p-4 bg-slate-50 min-h-screen text-slate-800 font-sans">
-    <h1 className="text-xl font-bold">Order History</h1>
-    <p className="text-slate-500 mt-2">Feature coming soon.</p>
-  </div>
-);
-
-const NotFoundPage = () => (
-  <div className="p-4 bg-slate-50 min-h-screen text-slate-800 font-sans flex items-center justify-center">
-    <h1 className="text-xl font-bold">404 - Page Not Found</h1>
-  </div>
-);
+// Placeholder for future implementation
+const HistoryPage = () => <div className="p-4"><h1>Order History (Coming Soon)</h1></div>;
+const NotFoundPage = () => <div className="p-4"><h1>404 - Not Found</h1></div>;
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Public Route */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected Routes (Authenticated Users Only) */}
+          {/* Protected Routes */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Navigate to="/catalog" replace />} />
             <Route path="/catalog" element={<CatalogPage />} />
-            <Route path="/success" element={<SuccessPage />} />
             <Route path="/history" element={<HistoryPage />} />
           </Route>
 
-          {/* Fallback */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>

@@ -10,7 +10,7 @@ interface ZohoItem {
   item_id: string;
   name: string;
   sku: string;
-  stock_on_hand: number; // Retained for data structure, ignored in UI
+  stock_on_hand: number; // Data retained but ignored in UI/Logic
   unit: string; 
   rate: number; // Selling price (Hidden in UI, used for backend payload)
 }
@@ -45,12 +45,12 @@ const MOCK_INVENTORY: ZohoItem[] = [
   { item_id: '225', name: 'Chicken Steak Coating 1kg*20bag', sku: 'FOOD-CHK-COAT', stock_on_hand: 0, unit: 'box', rate: 75.00 }
 ];
 
-// IDs matching the new Real Data for "Buy Again" simulation
+// IDs matching the new Real Data
 const MOCK_PAST_ORDER_IDS = ['201', '207', '211', '217', '220', '202']; 
 
 const CatalogPage = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // For redirect logic
   
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
@@ -103,7 +103,7 @@ const CatalogPage = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Build Payload (Zoho Books Sales Order Structure)
+      // 1. Build Payload
       const lineItems = Object.entries(orderDraft).map(([itemId, quantity]) => {
         const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
         return {
@@ -115,27 +115,22 @@ const CatalogPage = () => {
 
       const payload = {
         customer_id: user.zohoContactId,
-        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        date: new Date().toISOString().split('T')[0],
         line_items: lineItems,
         custom_fields: [{ label: "Customer PO", value: customerPO }]
       };
 
       // 2. Mock Network Request
       console.log('>>> SUBMITTING ORDER TO ZOHO BOOKS:', JSON.stringify(payload, null, 2));
-      
-      // Simulate API latency
       await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-      // 3. Clear State & Navigate
-      // Note: We capture the PO in a local var before clearing state, although state update is batched
-      const finalPO = customerPO; 
-      
+      // 3. Reset & Redirect
       setOrderDraft({});
       setCustomerPO('');
       setIsReviewOpen(false);
       
-      // Navigate to Success Page with State
-      navigate('/success', { state: { customerPO: finalPO } });
+      // Navigate to Success Page
+      navigate('/success');
 
     } catch (error) {
       console.error("Submission failed", error);
@@ -168,7 +163,7 @@ const CatalogPage = () => {
           <div className="flex w-full bg-slate-800 p-1 rounded">
             <button
               onClick={() => setViewMode('all')}
-              className={`flex-1 h-11 flex items-center justify-center text-xs font-bold uppercase tracking-wide rounded-sm transition-all ${
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-sm transition-all ${
                 viewMode === 'all' 
                   ? 'bg-slate-50 text-slate-900 shadow-sm' 
                   : 'text-slate-400 hover:text-slate-200'
@@ -178,7 +173,7 @@ const CatalogPage = () => {
             </button>
             <button
               onClick={() => setViewMode('buy-again')}
-              className={`flex-1 h-11 flex items-center justify-center text-xs font-bold uppercase tracking-wide rounded-sm transition-all ${
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center ${
                 viewMode === 'buy-again' 
                   ? 'bg-slate-50 text-slate-900 shadow-sm' 
                   : 'text-slate-400 hover:text-slate-200'
@@ -196,7 +191,7 @@ const CatalogPage = () => {
         <div className="px-2 pb-3">
           <input
             type="text"
-            className="block w-full h-11 px-3 bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm"
+            className="block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm"
             placeholder="FILTER BY SKU OR NAME..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -232,7 +227,7 @@ const CatalogPage = () => {
                     </h3>
                   </div>
 
-                  {/* Right: Industrial Stepper (44px touch targets) */}
+                  {/* Right: Industrial Stepper */}
                   <div className="flex items-center bg-white rounded border border-slate-300 shadow-sm">
                     <button 
                       onClick={() => handleDecrement(item.item_id)} 
@@ -275,9 +270,9 @@ const CatalogPage = () => {
       <div className="flex-none bg-white border-t border-slate-200 p-4 safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => setIsReviewOpen(true)}
-          className={`w-full h-12 rounded font-bold text-sm uppercase tracking-wider shadow-md transition-all ${
+          className={`w-full py-4 px-4 rounded font-bold text-sm uppercase tracking-wider shadow-md transition-all ${
             totalItemsSelected > 0 
-              ? 'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-700' 
+              ? 'bg-slate-900 text-white hover:bg-slate-800' 
               : 'bg-slate-200 text-slate-400 cursor-not-allowed'
           }`}
           disabled={totalItemsSelected === 0}
@@ -314,7 +309,7 @@ const CatalogPage = () => {
                 type="text"
                 id="po_number"
                 placeholder="ENTER PO NUMBER"
-                className="block w-full h-12 px-3 border border-slate-300 rounded focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm font-mono text-slate-900 bg-slate-50"
+                className="block w-full px-3 py-3 border border-slate-300 rounded focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm font-mono text-slate-900 bg-slate-50"
                 value={customerPO}
                 onChange={(e) => setCustomerPO(e.target.value)}
               />
@@ -355,7 +350,7 @@ const CatalogPage = () => {
              <button 
               onClick={submitOrder}
               disabled={isSubmitting}
-              className="w-full h-12 rounded font-bold text-white bg-slate-900 shadow-md hover:bg-slate-800 active:bg-slate-700 disabled:bg-slate-400 flex justify-center items-center uppercase tracking-wide transition-colors"
+              className="w-full py-4 px-4 rounded font-bold text-white bg-slate-900 shadow-md hover:bg-slate-800 disabled:bg-slate-400 flex justify-center items-center uppercase tracking-wide transition-colors"
             >
               {isSubmitting ? 'Processing...' : 'Confirm & Send Order'}
             </button>
