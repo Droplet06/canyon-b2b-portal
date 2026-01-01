@@ -1,6 +1,7 @@
 // src/pages/CatalogPage.tsx
 
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 // --- Types & Interfaces ---
@@ -48,14 +49,14 @@ const MOCK_INVENTORY: ZohoItem[] = [
 const MOCK_PAST_ORDER_IDS = ['201', '207', '211', '217', '220', '202']; 
 
 const CatalogPage = () => {
-  const { user } = useAuth(); // Access user data for payload
+  const { user } = useAuth();
+  const navigate = useNavigate(); // For redirect logic
   
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'all' | 'buy-again'>('all');
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   
   // Data State
   const [orderDraft, setOrderDraft] = useState<Record<string, number>>({});
@@ -65,13 +66,12 @@ const CatalogPage = () => {
 
   // Filter Logic
   const filteredItems = useMemo(() => {
-    // 1. First, filter by View Mode (All vs Buy Again)
     let items = MOCK_INVENTORY;
+    // 1. Filter by View Mode
     if (viewMode === 'buy-again') {
       items = items.filter(item => MOCK_PAST_ORDER_IDS.includes(item.item_id));
     }
-
-    // 2. Second, apply text search to the resulting list
+    // 2. Filter by Search Term
     const lowerTerm = searchTerm.toLowerCase();
     return items.filter((item) => 
       item.name.toLowerCase().includes(lowerTerm) || 
@@ -81,7 +81,6 @@ const CatalogPage = () => {
 
   // Stepper Logic
   const handleIncrement = (itemId: string) => {
-    // Unrestricted increment (Backorder allowed)
     setOrderDraft(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
   };
 
@@ -104,7 +103,7 @@ const CatalogPage = () => {
     setIsSubmitting(true);
 
     try {
-      // 1. Build Line Items
+      // 1. Build Payload
       const lineItems = Object.entries(orderDraft).map(([itemId, quantity]) => {
         const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
         return {
@@ -114,32 +113,24 @@ const CatalogPage = () => {
         };
       });
 
-      // 2. Construct Payload
       const payload = {
         customer_id: user.zohoContactId,
-        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        date: new Date().toISOString().split('T')[0],
         line_items: lineItems,
-        custom_fields: [
-          {
-            label: "Customer PO",
-            value: customerPO
-          }
-        ]
+        custom_fields: [{ label: "Customer PO", value: customerPO }]
       };
 
-      // 3. Mock Network Request
+      // 2. Mock Network Request
       console.log('>>> SUBMITTING ORDER TO ZOHO BOOKS:', JSON.stringify(payload, null, 2));
-      
-      await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-      // 4. Success Handling
+      // 3. Reset & Redirect
       setOrderDraft({});
       setCustomerPO('');
       setIsReviewOpen(false);
-      setShowSuccess(true);
       
-      // Hide success message after 3 seconds
-      setTimeout(() => setShowSuccess(false), 3000);
+      // Navigate to Success Page
+      navigate('/success');
 
     } catch (error) {
       console.error("Submission failed", error);
@@ -149,110 +140,123 @@ const CatalogPage = () => {
     }
   };
 
-  // Derived Totals
   const totalItemsSelected = Object.values(orderDraft).reduce((a, b) => a + b, 0);
 
   // --- Render ---
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 relative">
+    <div className="flex flex-col h-screen bg-slate-50 relative font-sans text-slate-900">
       
-      {/* 1. Header, Search & Filters (Fixed Top) */}
-      <div className="flex-none bg-white shadow-sm z-10">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <h1 className="text-lg font-bold text-gray-800">Product Catalog</h1>
-          <p className="text-xs text-gray-500">
-            Welcome, {user?.name}
-          </p>
+      {/* 1. Industrial Header */}
+      <div className="flex-none bg-slate-900 z-20 shadow-md">
+        <div className="px-4 py-4 flex justify-between items-end">
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">WAREHOUSE</h1>
+            <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+              ID: {user?.zohoContactId} | {user?.name.toUpperCase()}
+            </p>
+          </div>
         </div>
         
+        {/* View Switcher Tabs (Segmented Control) */}
+        <div className="flex px-2 pb-2">
+          <div className="flex w-full bg-slate-800 p-1 rounded">
+            <button
+              onClick={() => setViewMode('all')}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-sm transition-all ${
+                viewMode === 'all' 
+                  ? 'bg-slate-50 text-slate-900 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              All Items
+            </button>
+            <button
+              onClick={() => setViewMode('buy-again')}
+              className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide rounded-sm transition-all flex items-center justify-center ${
+                viewMode === 'buy-again' 
+                  ? 'bg-slate-50 text-slate-900 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <svg className={`w-3 h-3 mr-1.5 ${viewMode === 'buy-again' ? 'text-amber-500' : 'text-slate-500'}`} fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Buy Again
+            </button>
+          </div>
+        </div>
+
         {/* Search Bar */}
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="px-2 pb-3">
           <input
             type="text"
-            className="block w-full px-4 py-2 border border-gray-300 rounded-md bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
-            placeholder="Search by Name or SKU..."
+            className="block w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm"
+            placeholder="FILTER BY SKU OR NAME..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-
-        {/* View Switcher Tabs */}
-        <div className="flex w-full bg-white border-b border-gray-200">
-          <button
-            onClick={() => setViewMode('all')}
-            className={`flex-1 py-3 text-sm font-medium text-center focus:outline-none transition-colors ${
-              viewMode === 'all' 
-                ? 'bg-gray-900 text-white shadow-inner' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            All Products
-          </button>
-          <button
-            onClick={() => setViewMode('buy-again')}
-            className={`flex-1 py-3 text-sm font-medium text-center focus:outline-none transition-colors flex items-center justify-center ${
-              viewMode === 'buy-again' 
-                ? 'bg-gray-900 text-white shadow-inner' 
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <svg className={`w-4 h-4 mr-1 ${viewMode === 'buy-again' ? 'text-yellow-400' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            Buy Again
-          </button>
-        </div>
       </div>
 
-      {/* 2. Scrollable List */}
+      {/* 2. High-Density List */}
       <div className="flex-1 overflow-y-auto pb-24">
         {filteredItems.length === 0 ? (
-           <div className="p-8 text-center text-gray-500">
-             {viewMode === 'buy-again' 
-               ? "No past purchases found matching your search." 
-               : "No items found."}
+           <div className="p-8 text-center">
+             <p className="text-slate-400 text-sm font-medium">
+               {viewMode === 'buy-again' ? "NO HISTORY FOUND" : "NO ITEMS MATCH FILTER"}
+             </p>
            </div>
         ) : (
-          <ul className="divide-y divide-gray-200 bg-white">
+          <ul className="divide-y divide-slate-200 bg-white shadow-sm">
             {filteredItems.map((item) => {
               const qty = orderDraft[item.item_id] || 0;
 
               return (
-                <li key={item.item_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-gray-50">
-                   <div className="flex-1 mb-3 sm:mb-0 pr-4">
-                    <h3 className="text-sm font-bold text-gray-900">{item.name}</h3>
-                    <div className="mt-1 flex items-center text-xs space-x-3">
-                      <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded border border-gray-200 font-mono">
+                <li key={item.item_id} className="flex items-center justify-between p-3 hover:bg-slate-50 transition-colors">
+                  
+                  {/* Left: Info */}
+                  <div className="flex-1 pr-3 overflow-hidden">
+                    <div className="flex items-baseline mb-1">
+                      <span className="inline-block bg-slate-100 text-slate-600 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded mr-2 border border-slate-200">
                         {item.sku}
                       </span>
-                      {/* Stock display removed per requirements */}
                     </div>
+                    <h3 className="text-sm font-semibold text-slate-800 leading-snug truncate">
+                      {item.name}
+                    </h3>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto bg-gray-50 rounded-lg p-1 border border-gray-200">
+
+                  {/* Right: Industrial Stepper */}
+                  <div className="flex items-center bg-white rounded border border-slate-300 shadow-sm">
                     <button 
                       onClick={() => handleDecrement(item.item_id)} 
-                      className="w-10 h-10 flex items-center justify-center rounded-md bg-white border border-gray-200 shadow-sm disabled:opacity-50 disabled:bg-gray-50 text-gray-700" 
+                      className="h-11 w-11 flex items-center justify-center text-slate-600 hover:bg-slate-100 active:bg-slate-200 border-r border-slate-200 disabled:opacity-30 disabled:hover:bg-white transition-colors"
                       disabled={qty === 0}
+                      aria-label="Decrease"
                     >
-                      -
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="square" strokeLinejoin="miter" d="M20 12H4" />
+                      </svg>
                     </button>
                     
-                    <div className="flex flex-col items-center justify-center w-16 mx-1">
-                      <span className={`text-base font-bold ${qty > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <div className="flex flex-col items-center justify-center w-14 h-11 bg-slate-50">
+                      <span className={`text-sm font-bold leading-none ${qty > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
                         {qty}
                       </span>
-                      <span className="text-[10px] uppercase text-gray-500 font-medium tracking-wider">
+                      <span className="text-[9px] uppercase font-black text-slate-400 mt-0.5">
                         {item.unit}
                       </span>
                     </div>
 
                     <button 
                       onClick={() => handleIncrement(item.item_id)} 
-                      className="w-10 h-10 flex items-center justify-center rounded-md bg-white border border-gray-200 shadow-sm text-gray-700 active:bg-gray-100"
-                      // Always enabled for backorders
+                      className="h-11 w-11 flex items-center justify-center text-slate-900 hover:bg-slate-100 active:bg-slate-200 border-l border-slate-200 transition-colors"
+                      aria-label="Increase"
                     >
-                      +
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="square" strokeLinejoin="miter" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
                     </button>
                   </div>
                 </li>
@@ -262,110 +266,93 @@ const CatalogPage = () => {
         )}
       </div>
 
-      {/* 3. Footer Button */}
-      <div className="flex-none bg-white border-t border-gray-200 p-4 safe-area-bottom">
+      {/* 3. Footer Action */}
+      <div className="flex-none bg-white border-t border-slate-200 p-4 safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <button 
           onClick={() => setIsReviewOpen(true)}
-          className={`w-full py-3 px-4 rounded-md font-bold text-white shadow-sm transition-all ${
-            totalItemsSelected > 0 ? 'bg-gray-900 hover:bg-gray-800' : 'bg-gray-300 cursor-not-allowed'
+          className={`w-full py-4 px-4 rounded font-bold text-sm uppercase tracking-wider shadow-md transition-all ${
+            totalItemsSelected > 0 
+              ? 'bg-slate-900 text-white hover:bg-slate-800' 
+              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
           }`}
           disabled={totalItemsSelected === 0}
         >
-          {totalItemsSelected > 0 ? `Review Order (${totalItemsSelected} Items)` : 'Select Items to Order'}
+          {totalItemsSelected > 0 
+            ? `Review Manifest (${totalItemsSelected} Items)` 
+            : 'Select Items to Proceed'}
         </button>
       </div>
 
-      {/* 4. SUCCESS TOAST */}
-      {showSuccess && (
-        <div className="absolute top-4 left-4 right-4 z-50 bg-green-600 text-white px-4 py-3 rounded-md shadow-lg flex items-center justify-center animate-bounce-in">
-          <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-          <span className="font-bold">Order Draft Created Successfully!</span>
-        </div>
-      )}
-
-      {/* 5. REVIEW ORDER MODAL */}
+      {/* 4. Review Modal */}
       {isReviewOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-gray-100 animate-slide-up">
+        <div className="fixed inset-0 z-50 flex flex-col bg-slate-100 animate-slide-up">
           {/* Modal Header */}
-          <div className="flex-none bg-white shadow-sm px-4 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-800">Review Order</h2>
-            <button onClick={() => setIsReviewOpen(false)} className="text-gray-500 hover:text-gray-700 font-medium text-sm">
-              Close
+          <div className="flex-none bg-slate-900 px-4 py-4 flex justify-between items-center shadow-md">
+            <h2 className="text-lg font-bold text-white tracking-tight uppercase">Order Manifest</h2>
+            <button 
+              onClick={() => setIsReviewOpen(false)} 
+              className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-wider border border-slate-600 px-3 py-1 rounded hover:border-white transition-colors"
+            >
+              Cancel
             </button>
           </div>
 
           {/* Modal Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             
-            {/* PO Section */}
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-              <label htmlFor="po_number" className="block text-sm font-medium text-gray-700 mb-1">
-                Customer PO # <span className="text-gray-400 font-normal">(Optional)</span>
+            {/* PO Input */}
+            <div className="bg-white p-4 rounded shadow-sm border border-slate-200">
+              <label htmlFor="po_number" className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
+                Purchase Order (Optional)
               </label>
               <input
                 type="text"
                 id="po_number"
-                placeholder="e.g. PO-2025-001"
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-gray-500 focus:border-gray-500 sm:text-sm"
+                placeholder="ENTER PO NUMBER"
+                className="block w-full px-3 py-3 border border-slate-300 rounded focus:ring-2 focus:ring-slate-900 focus:border-slate-900 text-sm font-mono text-slate-900 bg-slate-50"
                 value={customerPO}
                 onChange={(e) => setCustomerPO(e.target.value)}
               />
             </div>
 
-            {/* Line Items Summary */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Order Summary
+            {/* Line Items */}
+            <div className="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-slate-100 px-4 py-3 border-b border-slate-200">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Items Selected</span>
               </div>
-              <ul className="divide-y divide-gray-200">
+              <ul className="divide-y divide-slate-100">
                 {Object.entries(orderDraft).map(([itemId, qty]) => {
                   const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
                   if (!item) return null;
                   return (
-                    <li key={itemId} className="flex justify-between py-3 px-4">
+                    <li key={itemId} className="flex justify-between items-center py-3 px-4">
                       <div className="pr-4">
-                        <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                        <p className="text-xs text-gray-500">{item.sku}</p>
+                        <div className="font-mono text-xs font-bold text-slate-500">{item.sku}</div>
+                        <div className="text-sm font-semibold text-slate-900">{item.name}</div>
                       </div>
-                      <div className="text-right whitespace-nowrap">
-                        <p className="text-sm font-bold text-gray-900">{qty} <span className="text-xs font-normal text-gray-500">{item.unit}</span></p>
+                      <div className="text-right">
+                        <span className="block text-lg font-bold text-slate-900">{qty}</span>
+                        <span className="block text-[10px] font-bold text-slate-400 uppercase">{item.unit}</span>
                       </div>
                     </li>
                   );
                 })}
               </ul>
-              <div className="bg-gray-50 px-4 py-3 border-t border-gray-200 flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-900">Total Items</span>
-                <span className="text-lg font-bold text-gray-900">{totalItemsSelected}</span>
+              <div className="bg-slate-50 px-4 py-4 border-t border-slate-200 flex justify-between items-center">
+                <span className="text-sm font-bold text-slate-600 uppercase">Total Count</span>
+                <span className="text-xl font-bold text-slate-900">{totalItemsSelected}</span>
               </div>
             </div>
           </div>
 
-          {/* Modal Footer Actions */}
-          <div className="flex-none bg-white border-t border-gray-200 p-4 safe-area-bottom space-y-3">
+          {/* Modal Footer */}
+          <div className="flex-none bg-white border-t border-slate-200 p-4 safe-area-bottom">
              <button 
               onClick={submitOrder}
               disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-md font-bold text-white bg-blue-600 shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-400 flex justify-center items-center"
+              className="w-full py-4 px-4 rounded font-bold text-white bg-slate-900 shadow-md hover:bg-slate-800 disabled:bg-slate-400 flex justify-center items-center uppercase tracking-wide transition-colors"
             >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Submitting Order...
-                </>
-              ) : (
-                'Confirm & Submit Order'
-              )}
-            </button>
-            <button 
-              onClick={() => setIsReviewOpen(false)}
-              disabled={isSubmitting}
-              className="w-full py-3 px-4 rounded-md font-medium text-gray-700 bg-white border border-gray-300 shadow-sm hover:bg-gray-50"
-            >
-              Continue Shopping
+              {isSubmitting ? 'Processing...' : 'Confirm & Send Order'}
             </button>
           </div>
         </div>
