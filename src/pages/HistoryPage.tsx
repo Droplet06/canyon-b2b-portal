@@ -1,99 +1,32 @@
 // src/pages/HistoryPage.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-// --- Types & Interfaces ---
-
-type OrderStatus = 'Draft' | 'Submitted' | 'Fulfilled' | 'Cancelled';
-
-interface OrderHistoryItem {
-  order_id: string;
-  zoho_salesorder_id: string;
-  date: string;
-  customer_po: string;
-  total_items: number;
-  total_amount_display?: string; // Optional price if we wanted to show it
-  status: OrderStatus;
-  preview_items: string[]; // List of item names for the snippet view
-}
-
-// --- Mock Data (Enriched with Item Previews) ---
-
-const MOCK_ORDER_HISTORY: OrderHistoryItem[] = [
-  {
-    order_id: 'SO-8892',
-    zoho_salesorder_id: 'zcRm-9921',
-    date: 'Jan 03, 2025',
-    customer_po: 'PO-2025-001',
-    total_items: 4,
-    status: 'Submitted',
-    preview_items: ['700ml PP Cup', '90mm Dome Lid', '33oz Rect Container', 'Boba Straws']
-  },
-  {
-    order_id: 'SO-8845',
-    zoho_salesorder_id: 'zcRm-8812',
-    date: 'Dec 15, 2024',
-    customer_po: 'DEC-RESTOCK',
-    total_items: 8,
-    status: 'Fulfilled',
-    preview_items: ['White Napkin 2-Ply', 'Heavy Duty Fork', 'Heavy Duty Spoon', 'CA #1 Take Out Box']
-  },
-  {
-    order_id: 'SO-8810',
-    zoho_salesorder_id: 'zcRm-8100',
-    date: 'Nov 20, 2024',
-    customer_po: 'N/A',
-    total_items: 2,
-    status: 'Fulfilled',
-    preview_items: ['Cane Sugar Syrup', 'Botan Rice Calrose']
-  },
-  {
-    order_id: 'DR-0021',
-    zoho_salesorder_id: 'draft_local',
-    date: 'Nov 05, 2024',
-    customer_po: 'PENDING-AUTH',
-    total_items: 12,
-    status: 'Draft',
-    preview_items: ['Chicken Steak Coating', 'Tonkatsu Sauce', 'Atsuyaki Tamago']
-  },
-];
+import { useOrder, Order } from '../context/OrderContext';
 
 const HistoryPage = () => {
   const { user } = useAuth();
+  const { orderHistory, reorder } = useOrder();
   const navigate = useNavigate();
 
-  // Helper: Status Styles (Semantic & Readable)
-  const getStatusStyle = (status: OrderStatus) => {
-    switch (status) {
-      case 'Submitted':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200'; // Green: Good/Sent
-      case 'Fulfilled':
-        return 'bg-blue-100 text-blue-800 border-blue-200'; // Blue: Complete/Official
-      case 'Draft':
-        return 'bg-amber-100 text-amber-800 border-amber-200'; // Orange: Warning/Incomplete
-      case 'Cancelled':
-        return 'bg-slate-100 text-slate-500 border-slate-200'; // Gray: Inactive
-      default:
-        return 'bg-slate-100 text-slate-600';
-    }
-  };
+  // Local state for "View Details" Modal
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  // Helper: Status Label (Human Readable)
-  const getStatusLabel = (status: OrderStatus) => {
+  // Helper: Status Styles
+  const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'Submitted': return 'Sent to Warehouse';
-      case 'Fulfilled': return 'Completed';
-      case 'Draft': return 'Draft Saved';
-      default: return status;
+      case 'Submitted': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'Fulfilled': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Draft': return 'bg-amber-100 text-amber-800 border-amber-200';
+      default: return 'bg-slate-100 text-slate-600';
     }
   };
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 font-sans text-slate-900">
       
-      {/* 1. Header (Consistent Industrial Theme) */}
+      {/* 1. Header */}
       <div className="flex-none bg-slate-900 shadow-md z-20">
         <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -108,9 +41,7 @@ const HistoryPage = () => {
             </button>
             <div>
               <h1 className="text-xl font-bold text-white tracking-tight">Order History</h1>
-              <p className="text-xs text-slate-400">
-                Past purchases for {user?.name}
-              </p>
+              <p className="text-xs text-slate-400">Past purchases for {user?.name}</p>
             </div>
           </div>
         </div>
@@ -118,7 +49,7 @@ const HistoryPage = () => {
 
       {/* 2. Scrollable List */}
       <div className="flex-1 overflow-y-auto p-4 pb-24">
-        {MOCK_ORDER_HISTORY.length === 0 ? (
+        {orderHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-20 text-center">
             <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mb-6 text-slate-400">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -127,7 +58,7 @@ const HistoryPage = () => {
             </div>
             <h3 className="text-slate-900 font-bold text-xl mb-2">No Past Orders</h3>
             <p className="text-slate-500 text-base max-w-xs mx-auto mb-8">
-              You haven't placed any orders yet. Visit the catalog to start.
+              Orders you submit will appear here.
             </p>
             <button 
               onClick={() => navigate('/catalog')}
@@ -138,67 +69,134 @@ const HistoryPage = () => {
           </div>
         ) : (
           <div className="space-y-5">
-            {MOCK_ORDER_HISTORY.map((order) => (
-              <div 
-                key={order.order_id} 
-                className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden"
-              >
-                {/* Card Header: Date & Status */}
-                <div className="px-5 py-4 border-b border-slate-50 flex justify-between items-start bg-slate-50/30">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {order.date}
-                    </h3>
-                    <div className="flex items-center mt-1 space-x-2 text-sm text-slate-500">
-                      <span>Order #: <span className="font-mono font-medium text-slate-700">{order.order_id}</span></span>
-                      {order.customer_po && order.customer_po !== 'N/A' && (
-                        <>
-                          <span className="text-slate-300">|</span>
-                          <span>PO: <span className="font-medium text-slate-700">{order.customer_po}</span></span>
-                        </>
-                      )}
+            {orderHistory.map((order) => {
+              const totalQuantity = order.line_items.reduce((acc, item) => acc + item.quantity, 0);
+              const previewNames = order.line_items.map(item => item.name);
+
+              return (
+                <div key={order.order_id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                  {/* Card Header */}
+                  <div className="px-5 py-4 border-b border-slate-50 flex justify-between items-start bg-slate-50/30">
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-900">{order.date}</h3>
+                      <div className="flex items-center mt-1 space-x-2 text-sm text-slate-500">
+                        <span>Ref: <span className="font-mono font-medium text-slate-700">{order.order_id}</span></span>
+                        {order.customer_po && (
+                          <>
+                            <span className="text-slate-300">|</span>
+                            <span>PO: <span className="font-medium text-slate-700">{order.customer_po}</span></span>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full border ${getStatusStyle(order.status)}`}>
+                      {order.status}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full border ${getStatusStyle(order.status)}`}>
-                    {getStatusLabel(order.status)}
-                  </span>
-                </div>
 
-                {/* Card Content: Item Snippet */}
-                <div className="px-5 py-4">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-                    Includes {order.total_items} Items:
-                  </p>
-                  <p className="text-sm text-slate-700 leading-relaxed">
-                    {order.preview_items.slice(0, 3).join(', ')}
-                    {order.preview_items.length > 3 && (
-                      <span className="text-slate-400 font-medium"> + {order.total_items - 3} more...</span>
-                    )}
-                  </p>
-                </div>
+                  {/* Card Snippet */}
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                      Contains {totalQuantity} Items:
+                    </p>
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      {previewNames.slice(0, 3).join(', ')}
+                      {previewNames.length > 3 && (
+                        <span className="text-slate-400 font-medium"> + {previewNames.length - 3} more...</span>
+                      )}
+                    </p>
+                  </div>
 
-                {/* Card Actions: Large, clear buttons */}
-                <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex gap-3">
-                  <button 
-                    className="flex-1 h-12 flex items-center justify-center bg-white border border-slate-300 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 hover:border-slate-400 transition-colors shadow-sm"
-                  >
-                    View Receipt
-                  </button>
-                  <button 
-                    onClick={() => navigate('/catalog')} // Logic would eventually pre-fill cart
-                    className="flex-1 h-12 flex items-center justify-center bg-slate-900 text-white font-bold text-sm rounded-lg hover:bg-slate-800 transition-colors shadow-md"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    Reorder This
-                  </button>
+                  {/* Card Actions */}
+                  <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex gap-3">
+                    <button 
+                      onClick={() => setSelectedOrder(order)}
+                      className="flex-1 h-12 flex items-center justify-center bg-white border border-slate-300 text-slate-700 font-bold text-sm rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+                    >
+                      View Receipt
+                    </button>
+                    <button 
+                      onClick={() => reorder(order.order_id)}
+                      className="flex-1 h-12 flex items-center justify-center bg-slate-900 text-white font-bold text-sm rounded-lg hover:bg-slate-800 transition-colors shadow-md"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reorder This
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* 3. Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-slate-100 animate-slide-up">
+          <div className="flex-none bg-slate-900 px-4 py-4 flex justify-between items-center shadow-md">
+            <h2 className="text-lg font-bold text-white tracking-tight uppercase">Order Details</h2>
+            <button 
+              onClick={() => setSelectedOrder(null)} 
+              className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-wider border border-slate-600 px-3 py-1 rounded hover:border-white transition-colors"
+            >
+              Close
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+             {/* Info Card */}
+             <div className="bg-white p-4 rounded shadow-sm border border-slate-200">
+                <div className="flex justify-between border-b border-slate-100 pb-3 mb-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Date</span>
+                  <span className="text-sm font-bold text-slate-900">{selectedOrder.date}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 pb-3 mb-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Order ID</span>
+                  <span className="text-sm font-mono font-bold text-slate-900">{selectedOrder.order_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs font-bold text-slate-400 uppercase">PO Number</span>
+                  <span className="text-sm font-bold text-slate-900">{selectedOrder.customer_po || 'N/A'}</span>
+                </div>
+             </div>
+
+             {/* Line Items */}
+             <div className="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                  Itemized List
+                </div>
+                <ul className="divide-y divide-slate-100">
+                  {selectedOrder.line_items.map((item, idx) => (
+                    <li key={idx} className="flex justify-between items-center py-3 px-4">
+                      <div className="pr-4">
+                         <div className="font-mono text-xs font-bold text-slate-500">{item.sku}</div>
+                         <div className="text-sm font-semibold text-slate-900">{item.name}</div>
+                      </div>
+                      <div className="text-right">
+                         <span className="block text-lg font-bold text-slate-900">{item.quantity}</span>
+                         <span className="block text-[10px] font-bold text-slate-400 uppercase">{item.unit}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+             </div>
+          </div>
+          
+          <div className="flex-none bg-white border-t border-slate-200 p-4 safe-area-bottom">
+             <button 
+               onClick={() => {
+                 reorder(selectedOrder.order_id);
+                 setSelectedOrder(null);
+               }}
+               className="w-full h-12 rounded font-bold text-white bg-slate-900 shadow-md hover:bg-slate-800 transition-colors uppercase tracking-wide flex justify-center items-center"
+             >
+               Reorder These Items
+             </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

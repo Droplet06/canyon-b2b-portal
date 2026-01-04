@@ -3,20 +3,19 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useOrder, Order } from '../context/OrderContext';
 
-// --- Types ---
+// --- Types & Interfaces ---
 
 interface ZohoItem {
   item_id: string;
   name: string;
   sku: string;
-  stock_on_hand: number;
+  stock_on_hand: number; // Retained for data structure, ignored in UI
   unit: string; 
-  rate: number;
+  rate: number; // Selling price (Hidden in UI, used for backend payload)
 }
 
-// --- Real Business Data (Inventory Source of Truth) ---
+// --- Real Business Data (Cleaned) ---
 
 const MOCK_INVENTORY: ZohoItem[] = [
   { item_id: '201', name: '33 oz 3 Compartment Black Rectangle w/ Clear Lid (150 pcs)', sku: 'CONT-BLK-33-3', stock_on_hand: 12, unit: 'box', rate: 44.65 },
@@ -46,11 +45,11 @@ const MOCK_INVENTORY: ZohoItem[] = [
   { item_id: '225', name: 'Chicken Steak Coating 1kg*20bag', sku: 'FOOD-CHK-COAT', stock_on_hand: 0, unit: 'box', rate: 75.00 }
 ];
 
+// IDs matching the new Real Data for "Buy Again" simulation
 const MOCK_PAST_ORDER_IDS = ['201', '207', '211', '217', '220', '202']; 
 
 const CatalogPage = () => {
   const { user } = useAuth();
-  const { activeCart, addToCart, submitOrder: contextSubmitOrder } = useOrder();
   const navigate = useNavigate();
   
   // UI State
@@ -59,16 +58,20 @@ const CatalogPage = () => {
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Local Data State
+  // Data State
+  const [orderDraft, setOrderDraft] = useState<Record<string, number>>({});
   const [customerPO, setCustomerPO] = useState('');
 
   // --- Logic ---
 
+  // Filter Logic
   const filteredItems = useMemo(() => {
     let items = MOCK_INVENTORY;
+    // 1. Filter by View Mode
     if (viewMode === 'buy-again') {
       items = items.filter(item => MOCK_PAST_ORDER_IDS.includes(item.item_id));
     }
+    // 2. Filter by Search Term
     const lowerTerm = searchTerm.toLowerCase();
     return items.filter((item) => 
       item.name.toLowerCase().includes(lowerTerm) || 
@@ -76,55 +79,63 @@ const CatalogPage = () => {
     );
   }, [searchTerm, viewMode]);
 
+  // Stepper Logic
   const handleIncrement = (itemId: string) => {
-    const currentQty = activeCart[itemId] || 0;
-    addToCart(itemId, currentQty + 1);
+    setOrderDraft(prev => ({ ...prev, [itemId]: (prev[itemId] || 0) + 1 }));
   };
 
   const handleDecrement = (itemId: string) => {
-    const currentQty = activeCart[itemId] || 0;
-    if (currentQty > 0) {
-      addToCart(itemId, currentQty - 1);
-    }
+    setOrderDraft(prev => {
+      const current = prev[itemId] || 0;
+      if (current <= 0) return prev; 
+      const updated = current - 1;
+      if (updated === 0) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [itemId]: updated };
+    });
   };
 
+  // Submission Logic
   const submitOrder = async () => {
     if (!user) return;
     setIsSubmitting(true);
 
     try {
-      // 1. Build Payload & Snapshot Item Details
-      const lineItems = Object.entries(activeCart).map(([itemId, quantity]) => {
+      // 1. Build Payload (Zoho Books Sales Order Structure)
+      const lineItems = Object.entries(orderDraft).map(([itemId, quantity]) => {
         const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
         return {
           item_id: itemId,
-          name: item?.name || 'Unknown Item', // Snapshot name
-          sku: item?.sku || 'N/A',           // Snapshot SKU
           quantity: quantity,
           unit: item?.unit || 'unit'
         };
       });
 
-      const newOrder: Order = {
-        order_id: `SO-${Math.floor(1000 + Math.random() * 9000)}`, // Generate Mock ID
+      const payload = {
         customer_id: user.zohoContactId,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), // e.g. Jan 04, 2026
+        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         line_items: lineItems,
-        customer_po: customerPO,
-        status: 'Submitted'
+        custom_fields: [{ label: "Customer PO", value: customerPO }]
       };
 
-      console.log('>>> SUBMITTING ORDER TO CONTEXT:', JSON.stringify(newOrder, null, 2));
+      // 2. Mock Network Request
+      console.log('>>> SUBMITTING ORDER TO ZOHO BOOKS:', JSON.stringify(payload, null, 2));
       
+      // Simulate API latency
       await new Promise(resolve => setTimeout(resolve, 1500)); 
 
-      // 2. Submit to Context
-      contextSubmitOrder(newOrder);
-
-      // 3. Reset UI & Navigate
+      // 3. Clear State & Navigate
+      // Note: We capture the PO in a local var before clearing state, although state update is batched
+      const finalPO = customerPO; 
+      
+      setOrderDraft({});
       setCustomerPO('');
       setIsReviewOpen(false);
-      navigate('/success', { state: { customerPO: customerPO } });
+      
+      // Navigate to Success Page with State
+      navigate('/success', { state: { customerPO: finalPO } });
 
     } catch (error) {
       console.error("Submission failed", error);
@@ -134,7 +145,7 @@ const CatalogPage = () => {
     }
   };
 
-  const totalItemsSelected = Object.values(activeCart).reduce((a, b) => a + b, 0);
+  const totalItemsSelected = Object.values(orderDraft).reduce((a, b) => a + b, 0);
 
   // --- Render ---
 
@@ -152,7 +163,7 @@ const CatalogPage = () => {
           </div>
         </div>
         
-        {/* View Switcher */}
+        {/* View Switcher Tabs (Segmented Control) */}
         <div className="flex px-2 pb-2">
           <div className="flex w-full bg-slate-800 p-1 rounded">
             <button
@@ -204,10 +215,12 @@ const CatalogPage = () => {
         ) : (
           <ul className="divide-y divide-slate-200 bg-white shadow-sm">
             {filteredItems.map((item) => {
-              const qty = activeCart[item.item_id] || 0;
+              const qty = orderDraft[item.item_id] || 0;
 
               return (
                 <li key={item.item_id} className="flex items-center justify-between p-3 hover:bg-slate-50 transition-colors">
+                  
+                  {/* Left: Info */}
                   <div className="flex-1 pr-3 overflow-hidden">
                     <div className="flex items-baseline mb-1">
                       <span className="inline-block bg-slate-100 text-slate-600 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded mr-2 border border-slate-200">
@@ -219,12 +232,13 @@ const CatalogPage = () => {
                     </h3>
                   </div>
 
-                  {/* Stepper */}
+                  {/* Right: Industrial Stepper (44px touch targets) */}
                   <div className="flex items-center bg-white rounded border border-slate-300 shadow-sm">
                     <button 
                       onClick={() => handleDecrement(item.item_id)} 
                       className="h-11 w-11 flex items-center justify-center text-slate-600 hover:bg-slate-100 active:bg-slate-200 border-r border-slate-200 disabled:opacity-30 disabled:hover:bg-white transition-colors"
                       disabled={qty === 0}
+                      aria-label="Decrease"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="square" strokeLinejoin="miter" d="M20 12H4" />
@@ -243,6 +257,7 @@ const CatalogPage = () => {
                     <button 
                       onClick={() => handleIncrement(item.item_id)} 
                       className="h-11 w-11 flex items-center justify-center text-slate-900 hover:bg-slate-100 active:bg-slate-200 border-l border-slate-200 transition-colors"
+                      aria-label="Increase"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         <path strokeLinecap="square" strokeLinejoin="miter" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -276,6 +291,7 @@ const CatalogPage = () => {
       {/* 4. Review Modal */}
       {isReviewOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-slate-100 animate-slide-up">
+          {/* Modal Header */}
           <div className="flex-none bg-slate-900 px-4 py-4 flex justify-between items-center shadow-md">
             <h2 className="text-lg font-bold text-white tracking-tight uppercase">Order Manifest</h2>
             <button 
@@ -286,7 +302,10 @@ const CatalogPage = () => {
             </button>
           </div>
 
+          {/* Modal Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            
+            {/* PO Input */}
             <div className="bg-white p-4 rounded shadow-sm border border-slate-200">
               <label htmlFor="po_number" className="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">
                 Purchase Order (Optional)
@@ -301,12 +320,13 @@ const CatalogPage = () => {
               />
             </div>
 
+            {/* Line Items */}
             <div className="bg-white rounded shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-100 px-4 py-3 border-b border-slate-200">
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Items Selected</span>
               </div>
               <ul className="divide-y divide-slate-100">
-                {Object.entries(activeCart).map(([itemId, qty]) => {
+                {Object.entries(orderDraft).map(([itemId, qty]) => {
                   const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
                   if (!item) return null;
                   return (
@@ -330,6 +350,7 @@ const CatalogPage = () => {
             </div>
           </div>
 
+          {/* Modal Footer */}
           <div className="flex-none bg-white border-t border-slate-200 p-4 safe-area-bottom">
              <button 
               onClick={submitOrder}

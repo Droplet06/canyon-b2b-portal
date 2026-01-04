@@ -3,6 +3,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { OrderProvider } from './context/OrderContext'; // 1. 导入新的 Provider
 import ProtectedRoute from './components/common/ProtectedRoute';
 
 // Pages
@@ -21,21 +22,24 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
-          {/* Public Route */}
-          <Route path="/login" element={<LoginPage />} />
+        {/* 2. 用 OrderProvider 包裹所有路由 */}
+        <OrderProvider>
+          <Routes>
+            {/* Public Route */}
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Protected Routes (Authenticated Users Only) */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Navigate to="/catalog" replace />} />
-            <Route path="/catalog" element={<CatalogPage />} />
-            <Route path="/success" element={<SuccessPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-          </Route>
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/" element={<Navigate to="/catalog" replace />} />
+              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/success" element={<SuccessPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+            </Route>
 
-          {/* Fallback */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+            {/* Fallback */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </OrderProvider>
       </Router>
     </AuthProvider>
   );
