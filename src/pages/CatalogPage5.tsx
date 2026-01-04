@@ -11,44 +11,41 @@ interface ZohoItem {
   item_id: string;
   name: string;
   sku: string;
-  stock_on_hand: number; // Retained for data structure, ignored in UI
+  stock_on_hand: number;
   unit: string; 
-  rate: number; // Hidden in UI
-  category: string; // New field for filtering
-  image_url?: string; // New field for thumbnails
+  rate: number;
 }
 
-// --- Real Business Data (Enriched with Categories & Images) ---
+// --- Real Business Data (Inventory Source of Truth) ---
 
 const MOCK_INVENTORY: ZohoItem[] = [
-  { item_id: '201', name: '33 oz 3 Compartment Black Rectangle w/ Clear Lid (150 pcs)', sku: 'CONT-BLK-33-3', stock_on_hand: 12, unit: 'box', rate: 44.65, category: 'Packaging' },
-  { item_id: '202', name: '700ml Cup (500 pcs)', sku: 'CUP-PP-700', stock_on_hand: 12, unit: 'box', rate: 50.00, category: 'Packaging', image_url: 'https://placehold.co/100x100/e2e8f0/1e293b?text=Cup' },
-  { item_id: '203', name: 'Ahjikan Atsuyaki Tamago 17.60oz', sku: 'FOOD-TAMAGO', stock_on_hand: 0, unit: 'pcs', rate: 6.11, category: 'Food' },
-  { item_id: '204', name: 'Ajishima Fuikake Nori Komi 1.1lb', sku: 'FOOD-NORI', stock_on_hand: 0, unit: 'pcs', rate: 19.78, category: 'Food' },
-  { item_id: '205', name: 'Botan Rice Calrose Kraft 50lb', sku: 'RICE-CAL-50', stock_on_hand: 0, unit: 'pcs', rate: 28.89, category: 'Food', image_url: 'https://placehold.co/100x100/e2e8f0/1e293b?text=Rice' },
-  { item_id: '206', name: 'Bulldog Tonkatsu Sc Pet-Btl 60.9oz', sku: 'SAUCE-TONK', stock_on_hand: 0, unit: 'pcs', rate: 10.33, category: 'Sauces' },
-  { item_id: '207', name: 'CA #1 White Paper Take Out Box (450pcs)', sku: 'CA-BOX-1', stock_on_hand: 13, unit: 'box', rate: 40.00, category: 'Packaging' },
-  { item_id: '208', name: 'CA #2 White Paper Take Out Box (200pcs)', sku: 'CA-BOX-2', stock_on_hand: 0, unit: 'box', rate: 34.00, category: 'Packaging' },
-  { item_id: '209', name: 'CA #4 White Paper Take Out Box (160pcs)', sku: 'CA-BOX-4', stock_on_hand: 13, unit: 'box', rate: 48.40, category: 'Packaging' },
-  { item_id: '210', name: 'CA #8 White Paper Take Out Box (300pcs)', sku: 'CA-BOX-8', stock_on_hand: 13, unit: 'box', rate: 45.00, category: 'Packaging' },
-  { item_id: '211', name: 'CA 12 Kraft Paper Bag (250pcs)', sku: 'BAG-KRAFT-12', stock_on_hand: 24, unit: 'box', rate: 50.00, category: 'Packaging' },
-  { item_id: '212', name: 'CA 12 oz Deli Container (240 pcs)', sku: 'DELI-CONT-12', stock_on_hand: 4, unit: 'box', rate: 20.75, category: 'Packaging' },
-  { item_id: '213', name: 'CA 16 oz Deli Container (240 pcs)', sku: 'DELI-CONT-16', stock_on_hand: 2, unit: 'box', rate: 23.75, category: 'Packaging' },
-  { item_id: '214', name: 'CA 23cm Bamboo Chopsticks Twin (2000pcs)', sku: 'CUT-CHOP-23', stock_on_hand: 10, unit: 'box', rate: 45.20, category: 'Packaging' },
-  { item_id: '215', name: 'CA 24 oz Deli Container (240 pcs)', sku: 'DELI-CONT-24', stock_on_hand: 11, unit: 'box', rate: 28.75, category: 'Packaging' },
-  { item_id: '216', name: 'CA 32 oz Deli Container (240 pcs)', sku: 'DELI-CONT-32', stock_on_hand: 5, unit: 'box', rate: 34.75, category: 'Packaging' },
-  { item_id: '217', name: 'CA 36 oz Black Bowl w/ Clear Lid (150 pcs)', sku: 'BOWL-BLK-36', stock_on_hand: 29, unit: 'box', rate: 22.80, category: 'Packaging' },
-  { item_id: '218', name: 'CA 6.5 Heavy Duty Spoon (1000pcs)', sku: 'CUT-SPN-HD', stock_on_hand: 8, unit: 'box', rate: 17.79, category: 'Packaging' },
-  { item_id: '219', name: 'CA 64 oz Deli Container (120 pcs)', sku: 'DELI-CONT-64', stock_on_hand: 15, unit: 'box', rate: 45.00, category: 'Packaging' },
-  { item_id: '220', name: 'CA 6lb Kraft Paper Bag (1000pcs)', sku: 'BAG-KRAFT-6', stock_on_hand: 37, unit: 'box', rate: 25.30, category: 'Packaging' },
-  { item_id: '221', name: 'CA 8 oz Deli Container (240 pcs)', sku: 'DELI-CONT-8', stock_on_hand: 2, unit: 'box', rate: 19.25, category: 'Packaging' },
-  { item_id: '222', name: 'CA 90 PP Cup Lid (1000pcs)', sku: 'LID-PP-90', stock_on_hand: 18, unit: 'box', rate: 40.00, category: 'Packaging' },
-  { item_id: '223', name: 'CA Dinner Napkin 16.35*13.86 (3000pcs)', sku: 'NAP-DIN-LG', stock_on_hand: 16, unit: 'box', rate: 40.00, category: 'Packaging' },
-  { item_id: '224', name: 'Cane sugar syrup (25kg)', sku: 'SYRUP-CANE', stock_on_hand: 0, unit: 'pcs', rate: 48.00, category: 'Beverage' },
-  { item_id: '225', name: 'Chicken Steak Coating 1kg*20bag', sku: 'FOOD-CHK-COAT', stock_on_hand: 0, unit: 'box', rate: 75.00, category: 'Food' }
+  { item_id: '201', name: '33 oz 3 Compartment Black Rectangle w/ Clear Lid (150 pcs)', sku: 'CONT-BLK-33-3', stock_on_hand: 12, unit: 'box', rate: 44.65 },
+  { item_id: '202', name: '700ml Cup (500 pcs)', sku: 'CUP-PP-700', stock_on_hand: 12, unit: 'box', rate: 50.00 },
+  { item_id: '203', name: 'Ahjikan Atsuyaki Tamago 17.60oz', sku: 'FOOD-TAMAGO', stock_on_hand: 0, unit: 'pcs', rate: 6.11 },
+  { item_id: '204', name: 'Ajishima Fuikake Nori Komi 1.1lb', sku: 'FOOD-NORI', stock_on_hand: 0, unit: 'pcs', rate: 19.78 },
+  { item_id: '205', name: 'Botan Rice Calrose Kraft 50lb', sku: 'RICE-CAL-50', stock_on_hand: 0, unit: 'pcs', rate: 28.89 },
+  { item_id: '206', name: 'Bulldog Tonkatsu Sc Pet-Btl 60.9oz', sku: 'SAUCE-TONK', stock_on_hand: 0, unit: 'pcs', rate: 10.33 },
+  { item_id: '207', name: 'CA #1 White Paper Take Out Box (450pcs)', sku: 'CA-BOX-1', stock_on_hand: 13, unit: 'box', rate: 40.00 },
+  { item_id: '208', name: 'CA #2 White Paper Take Out Box (200pcs)', sku: 'CA-BOX-2', stock_on_hand: 0, unit: 'box', rate: 34.00 },
+  { item_id: '209', name: 'CA #4 White Paper Take Out Box (160pcs)', sku: 'CA-BOX-4', stock_on_hand: 13, unit: 'box', rate: 48.40 },
+  { item_id: '210', name: 'CA #8 White Paper Take Out Box (300pcs)', sku: 'CA-BOX-8', stock_on_hand: 13, unit: 'box', rate: 45.00 },
+  { item_id: '211', name: 'CA 12 Kraft Paper Bag (250pcs)', sku: 'BAG-KRAFT-12', stock_on_hand: 24, unit: 'box', rate: 50.00 },
+  { item_id: '212', name: 'CA 12 oz Deli Container (240 pcs)', sku: 'DELI-CONT-12', stock_on_hand: 4, unit: 'box', rate: 20.75 },
+  { item_id: '213', name: 'CA 16 oz Deli Container (240 pcs)', sku: 'DELI-CONT-16', stock_on_hand: 2, unit: 'box', rate: 23.75 },
+  { item_id: '214', name: 'CA 23cm Bamboo Chopsticks Twin (2000pcs)', sku: 'CUT-CHOP-23', stock_on_hand: 10, unit: 'box', rate: 45.20 },
+  { item_id: '215', name: 'CA 24 oz Deli Container (240 pcs)', sku: 'DELI-CONT-24', stock_on_hand: 11, unit: 'box', rate: 28.75 },
+  { item_id: '216', name: 'CA 32 oz Deli Container (240 pcs)', sku: 'DELI-CONT-32', stock_on_hand: 5, unit: 'box', rate: 34.75 },
+  { item_id: '217', name: 'CA 36 oz Black Bowl w/ Clear Lid (150 pcs)', sku: 'BOWL-BLK-36', stock_on_hand: 29, unit: 'box', rate: 22.80 },
+  { item_id: '218', name: 'CA 6.5 Heavy Duty Spoon (1000pcs)', sku: 'CUT-SPN-HD', stock_on_hand: 8, unit: 'box', rate: 17.79 },
+  { item_id: '219', name: 'CA 64 oz Deli Container (120 pcs)', sku: 'DELI-CONT-64', stock_on_hand: 15, unit: 'box', rate: 45.00 },
+  { item_id: '220', name: 'CA 6lb Kraft Paper Bag (1000pcs)', sku: 'BAG-KRAFT-6', stock_on_hand: 37, unit: 'box', rate: 25.30 },
+  { item_id: '221', name: 'CA 8 oz Deli Container (240 pcs)', sku: 'DELI-CONT-8', stock_on_hand: 2, unit: 'box', rate: 19.25 },
+  { item_id: '222', name: 'CA 90 PP Cup Lid (1000pcs)', sku: 'LID-PP-90', stock_on_hand: 18, unit: 'box', rate: 40.00 },
+  { item_id: '223', name: 'CA Dinner Napkin 16.35*13.86 (3000pcs)', sku: 'NAP-DIN-LG', stock_on_hand: 16, unit: 'box', rate: 40.00 },
+  { item_id: '224', name: 'Cane sugar syrup (25kg)', sku: 'SYRUP-CANE', stock_on_hand: 0, unit: 'pcs', rate: 48.00 },
+  { item_id: '225', name: 'Chicken Steak Coating 1kg*20bag', sku: 'FOOD-CHK-COAT', stock_on_hand: 0, unit: 'box', rate: 75.00 }
 ];
 
-const CATEGORIES = ['ALL', 'Packaging', 'Food', 'Sauces', 'Beverage'];
 const MOCK_PAST_ORDER_IDS = ['201', '207', '211', '217', '220', '202']; 
 
 const CatalogPage = () => {
@@ -59,7 +56,6 @@ const CatalogPage = () => {
   // UI State
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'all' | 'buy-again'>('all');
-  const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -70,24 +66,15 @@ const CatalogPage = () => {
 
   const filteredItems = useMemo(() => {
     let items = MOCK_INVENTORY;
-    
-    // 1. Filter by View Mode (Buy Again)
     if (viewMode === 'buy-again') {
       items = items.filter(item => MOCK_PAST_ORDER_IDS.includes(item.item_id));
     }
-
-    // 2. Filter by Category
-    if (selectedCategory !== 'ALL') {
-      items = items.filter(item => item.category === selectedCategory);
-    }
-
-    // 3. Filter by Search Term
     const lowerTerm = searchTerm.toLowerCase();
     return items.filter((item) => 
       item.name.toLowerCase().includes(lowerTerm) || 
       item.sku.toLowerCase().includes(lowerTerm)
     );
-  }, [searchTerm, viewMode, selectedCategory]);
+  }, [searchTerm, viewMode]);
 
   const handleIncrement = (itemId: string) => {
     const currentQty = activeCart[itemId] || 0;
@@ -111,18 +98,17 @@ const CatalogPage = () => {
         const item = MOCK_INVENTORY.find(i => i.item_id === itemId);
         return {
           item_id: itemId,
-          name: item?.name || 'Unknown Item', 
-          sku: item?.sku || 'N/A',           
+          name: item?.name || 'Unknown Item', // Snapshot name
+          sku: item?.sku || 'N/A',           // Snapshot SKU
           quantity: quantity,
           unit: item?.unit || 'unit'
         };
       });
 
-      // 2026 Date logic
       const newOrder: Order = {
-        order_id: `SO-${Math.floor(1000 + Math.random() * 9000)}`, 
+        order_id: `SO-${Math.floor(1000 + Math.random() * 9000)}`, // Generate Mock ID
         customer_id: user.zohoContactId,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), 
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), // e.g. Jan 04, 2026
         line_items: lineItems,
         customer_po: customerPO,
         status: 'Submitted'
@@ -132,8 +118,10 @@ const CatalogPage = () => {
       
       await new Promise(resolve => setTimeout(resolve, 1500)); 
 
+      // 2. Submit to Context
       contextSubmitOrder(newOrder);
 
+      // 3. Reset UI & Navigate
       setCustomerPO('');
       setIsReviewOpen(false);
       navigate('/success', { state: { customerPO: customerPO } });
@@ -153,7 +141,7 @@ const CatalogPage = () => {
   return (
     <div className="flex flex-col h-screen bg-slate-50 relative font-sans text-slate-900">
       
-      {/* 1. Industrial Header & Controls */}
+      {/* 1. Industrial Header */}
       <div className="flex-none bg-slate-900 z-20 shadow-md">
         <div className="px-4 py-4 flex justify-between items-end">
           <div>
@@ -164,7 +152,7 @@ const CatalogPage = () => {
           </div>
         </div>
         
-        {/* View Switcher (All vs Buy Again) */}
+        {/* View Switcher */}
         <div className="flex px-2 pb-2">
           <div className="flex w-full bg-slate-800 p-1 rounded">
             <button
@@ -194,7 +182,7 @@ const CatalogPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="px-2 pb-2">
+        <div className="px-2 pb-3">
           <input
             type="text"
             className="block w-full h-11 px-3 bg-slate-800 border border-slate-700 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-400 text-sm"
@@ -203,43 +191,15 @@ const CatalogPage = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-
-        {/* Category Horizontal Slider (Pills) */}
-        <div className="flex px-2 pb-3 overflow-x-auto whitespace-nowrap hide-scrollbar gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`flex-none px-4 h-11 rounded-full text-xs font-bold uppercase tracking-wide border transition-all ${
-                selectedCategory === cat
-                  ? 'bg-slate-50 text-slate-900 border-slate-50'
-                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* 2. High-Density Product List */}
+      {/* 2. High-Density List */}
       <div className="flex-1 overflow-y-auto pb-24">
         {filteredItems.length === 0 ? (
            <div className="p-8 text-center">
-             <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-             </div>
-             <p className="text-slate-500 text-sm font-medium">
-               No items found matching your filters.
+             <p className="text-slate-400 text-sm font-medium">
+               {viewMode === 'buy-again' ? "NO HISTORY FOUND" : "NO ITEMS MATCH FILTER"}
              </p>
-             <button 
-                onClick={() => { setSearchTerm(''); setSelectedCategory('ALL'); setViewMode('all'); }}
-                className="mt-4 px-4 py-2 bg-slate-200 text-slate-700 font-bold text-xs uppercase rounded hover:bg-slate-300"
-             >
-               Clear Filters
-             </button>
            </div>
         ) : (
           <ul className="divide-y divide-slate-200 bg-white shadow-sm">
@@ -247,47 +207,20 @@ const CatalogPage = () => {
               const qty = activeCart[item.item_id] || 0;
 
               return (
-                <li key={item.item_id} className="flex p-3 hover:bg-slate-50 transition-colors">
-                  
-                  {/* Left: Thumbnail (Visual Clarity) */}
-                  <div className="flex-none w-16 h-16 sm:w-20 sm:h-20 mr-3">
-                    {item.image_url ? (
-                      <img 
-                        src={item.image_url} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover rounded border border-slate-200 bg-white"
-                        onError={(e) => {
-                          // Fallback on error logic could be here, or simplified to just show placeholder initially
-                          (e.target as HTMLImageElement).style.display = 'none';
-                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded border border-slate-200 bg-slate-50 flex flex-col items-center justify-center text-slate-300">
-                        <svg className="w-6 h-6 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <span className="text-[8px] font-bold uppercase tracking-wider">N/A</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Middle: Info */}
-                  <div className="flex-1 flex flex-col justify-between pr-3 overflow-hidden h-16 sm:h-20">
-                    <div>
-                      <div className="flex items-baseline">
-                         <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-full">
-                           {item.sku}
-                         </span>
-                      </div>
-                      <h3 className="text-sm font-bold text-slate-800 leading-tight mt-1 line-clamp-2">
-                        {item.name}
-                      </h3>
+                <li key={item.item_id} className="flex items-center justify-between p-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex-1 pr-3 overflow-hidden">
+                    <div className="flex items-baseline mb-1">
+                      <span className="inline-block bg-slate-100 text-slate-600 text-[11px] font-mono font-bold px-1.5 py-0.5 rounded mr-2 border border-slate-200">
+                        {item.sku}
+                      </span>
                     </div>
+                    <h3 className="text-sm font-semibold text-slate-800 leading-snug truncate">
+                      {item.name}
+                    </h3>
                   </div>
 
-                  {/* Right: Stepper (Self-align center) */}
-                  <div className="flex items-center self-center bg-white rounded border border-slate-300 shadow-sm ml-auto">
+                  {/* Stepper */}
+                  <div className="flex items-center bg-white rounded border border-slate-300 shadow-sm">
                     <button 
                       onClick={() => handleDecrement(item.item_id)} 
                       className="h-11 w-11 flex items-center justify-center text-slate-600 hover:bg-slate-100 active:bg-slate-200 border-r border-slate-200 disabled:opacity-30 disabled:hover:bg-white transition-colors"
@@ -298,11 +231,11 @@ const CatalogPage = () => {
                       </svg>
                     </button>
                     
-                    <div className="flex flex-col items-center justify-center w-12 h-11 bg-slate-50">
+                    <div className="flex flex-col items-center justify-center w-14 h-11 bg-slate-50">
                       <span className={`text-sm font-bold leading-none ${qty > 0 ? 'text-slate-900' : 'text-slate-300'}`}>
                         {qty}
                       </span>
-                      <span className="text-[8px] uppercase font-black text-slate-400 mt-0.5 truncate max-w-[40px]">
+                      <span className="text-[9px] uppercase font-black text-slate-400 mt-0.5">
                         {item.unit}
                       </span>
                     </div>
@@ -378,16 +311,11 @@ const CatalogPage = () => {
                   if (!item) return null;
                   return (
                     <li key={itemId} className="flex justify-between items-center py-3 px-4">
-                      <div className="pr-4 flex items-center">
-                        {item.image_url && (
-                           <img src={item.image_url} alt="" className="w-8 h-8 rounded border border-slate-200 mr-3 object-cover hidden sm:block" />
-                        )}
-                        <div>
-                           <div className="font-mono text-xs font-bold text-slate-500">{item.sku}</div>
-                           <div className="text-sm font-semibold text-slate-900 line-clamp-1">{item.name}</div>
-                        </div>
+                      <div className="pr-4">
+                        <div className="font-mono text-xs font-bold text-slate-500">{item.sku}</div>
+                        <div className="text-sm font-semibold text-slate-900">{item.name}</div>
                       </div>
-                      <div className="text-right flex-none pl-2">
+                      <div className="text-right">
                         <span className="block text-lg font-bold text-slate-900">{qty}</span>
                         <span className="block text-[10px] font-bold text-slate-400 uppercase">{item.unit}</span>
                       </div>
