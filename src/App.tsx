@@ -9,14 +9,7 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
 import CatalogPage from './pages/CatalogPage';
 import SuccessPage from './pages/SuccessPage';
-
-// Placeholder Pages
-const HistoryPage = () => (
-  <div className="p-4 bg-slate-50 min-h-screen text-slate-800 font-sans">
-    <h1 className="text-xl font-bold">Order History</h1>
-    <p className="text-slate-500 mt-2">Feature coming soon.</p>
-  </div>
-);
+import HistoryPage from './pages/HistoryPage';
 
 const NotFoundPage = () => (
   <div className="p-4 bg-slate-50 min-h-screen text-slate-800 font-sans flex items-center justify-center">
